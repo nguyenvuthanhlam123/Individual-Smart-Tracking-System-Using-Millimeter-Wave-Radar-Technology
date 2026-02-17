@@ -5,12 +5,12 @@
 // ===================================================================================
 
 // --- WiFi Credentials ---
-const char* WIFI_SSID = "Michael's Hotspot";
-const char* WIFI_PASSWORD = "khanhlinh";
+const char* WIFI_SSID = "Lam";
+const char* WIFI_PASSWORD = "Lam070905";
 
 // --- MQTT Broker Configuration ---
-const char* MQTT_BROKER_IP = "192.168.142.203";
-const int MQTT_BROKER_PORT = 1885;
+const char* MQTT_BROKER_IP = ""; // IPv4 address
+const int MQTT_BROKER_PORT = 1883;
 const char* MQTT_CLIENT_ID = "esp32-central-node";
 
 // --- MQTT Topics ---
@@ -18,9 +18,9 @@ const char* SENSOR_TOPIC = "/node/central";
 const char* OUTPUT_TOPIC = "/central/d_gateway";
 
 // --- Anchor Coordinates ---
-const float S2_a = 370.0;
-const float S3_c = 0.0;
-const float S3_b = 110.0;
+const float S2_a = 500;
+const float S3_c = 250;
+const float S3_b = 410;
 
 // --- Calculation Settings ---
 // const int HISTORY_SIZE = 5;
