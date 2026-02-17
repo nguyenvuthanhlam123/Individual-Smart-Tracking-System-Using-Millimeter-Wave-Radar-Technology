@@ -1,0 +1,71 @@
+# docker-compose.yml (Relevant sections updated)
+version: "3.8"
+
+services:
+  mongodb:
+    # ... (mongodb definition - no profile needed) ...
+    image: mongo:6
+    container_name: iot-monitor-mongo-db
+    ports: ["27017:27017"]
+    volumes: ["mongo-data:/data/db"]
+    restart: unless-stopped
+    networks: ["iot_monitor_net"]
+
+  mqtt-broker: # Internal broker for simulation
+    image: eclipse-mosquitto:2.0.21
+    container_name: iot-monitor-mqtt-broker
+    ports: ["1883:1883"]
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:ro
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+    networks: ["iot_monitor_net"]
+    profiles: # Assign to the 'simulate' profile
+      - simulate
+
+  backend:
+    # ... (backend definition - no profile needed) ...
+    build: ./backend
+    container_name: iot-monitor-backend
+    ports: ["3000:3000"]
+    environment:
+      PORT: 3000
+      MONGO_URI: mongodb://iot-monitor-mongo-db:27017/iot_monitor_db
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL:-mqtt://iot-monitor-mqtt-broker:1883} # Default tries internal broker
+      SESSION_SECRET: ${SESSION_SECRET:-YourVerySecretKeyGoesHere_ChangeMe_e1337b} # CHANGE THIS!
+    depends_on:
+      ["mongodb"] # Removed direct dependency on internal broker here
+      # It will wait for network anyway. Connection logic handles retry.
+    restart: unless-stopped
+    networks: ["iot_monitor_net"]
+
+  frontend:
+    # ... (frontend definition - no profile needed) ...
+    build: ./frontend
+    container_name: iot-monitor-frontend
+    ports: ["8080:80"]
+    depends_on: ["backend"]
+    restart: unless-stopped
+    networks: ["iot_monitor_net"]
+
+  simulator: # Simulator service
+    build: ./simulator
+    container_name: iot-monitor-simulator
+    environment:
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL:-mqtt://iot-monitor-mqtt-broker:1883} # Default tries internal broker
+    depends_on: # Depends on the internal broker only when simulating
+      - mqtt-broker
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    networks: ["iot_monitor_net"]
+    profiles: # Assign to the 'simulate' profile
+      - simulate
+
+volumes:
+  mongo-data: {}
+
+networks:
+  iot_monitor_net:
+    driver: bridge

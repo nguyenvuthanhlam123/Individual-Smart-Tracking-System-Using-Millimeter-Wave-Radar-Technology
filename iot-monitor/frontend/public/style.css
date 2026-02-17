@@ -1,0 +1,37 @@
+/* frontend/public/style.css */
+.topic-name {
+  word-break: break-all;
+  font-size: 0.9rem;
+}
+#messageSizeChart {
+  max-height: 350px;
+}
+.card.h-100 {
+  height: 100%;
+}
+.card-body {
+  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.card-text {
+  font-size: 0.85rem;
+}
+.table td,
+.table th {
+  font-size: 0.85rem;
+  vertical-align: middle;
+}
+.table td:nth-child(4) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px;
+}
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+#username-display {
+  color: rgba(255, 255, 255, 0.75);
+}

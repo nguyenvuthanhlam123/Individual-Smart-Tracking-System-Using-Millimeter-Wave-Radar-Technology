@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IoT Dashboard - Plotly 3D</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        /* Color Palette */
+        --primary-bg: #f8f9fa; /* Light gray page background */
+        --card-bg: #ffffff; /* White card background */
+        --card-border-color: #e9ecef; /* Softer border for cards */
+        --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Subtle, diffused shadow */
+        --text-primary: #212529; /* Dark gray for primary text (good contrast) */
+        --text-secondary: #6c757d; /* Lighter gray for secondary/muted text */
+        --text-tertiary: #adb5bd; /* Even lighter gray for less prominent info */
+        --accent-color: #007bff; /* A modern blue for subtle accents (e.g., focus rings) */
+        --divider-color: #dee2e6; /* For subtle lines and dividers */
+        --danger-bg: #dc3545; /* For error messages (if targetable) */
+        --warning-bg: #ffc107; /* For warning messages (if targetable) */
+
+        /* Spacing & Sizing */
+        --base-font-size: 16px;
+        --spacing-unit: 1rem; /* Approx 16px by default */
+        --gap-large: calc(var(--spacing-unit) * 1.5); /* Approx 24px */
+        --gap-medium: var(--spacing-unit); /* Approx 16px */
+        --gap-small: calc(var(--spacing-unit) * 0.5); /* Approx 8px */
+
+        --border-radius-md: 8px;
+        --border-radius-sm: 4px;
+      }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, "Helvetica Neue", Arial, sans-serif;
+        margin: 0;
+        padding: var(--gap-large); /* More generous padding on the body */
+        background-color: var(--primary-bg);
+        color: var(--text-primary);
+        line-height: 1.6;
+        font-size: var(--base-font-size);
+        -webkit-font-smoothing: antialiased; /* Smoother fonts on WebKit */
+        -moz-osx-font-smoothing: grayscale; /* Smoother fonts on Firefox */
+      }
+
+      /* --- Headings --- */
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        margin-top: 0;
+        margin-bottom: var(--spacing-unit);
+        font-weight: 600; /* Slightly bolder for better hierarchy */
+        color: var(--text-primary);
+        line-height: 1.3;
+      }
+
+      h1 {
+        font-size: 1.875rem; /* ~30px */
+        margin-bottom: var(--gap-large);
+        text-align: center;
+      }
+      h2 {
+        font-size: 1.5rem; /* ~24px */
+        text-align: center;
+      }
+      h3 {
+        font-size: 1.25rem; /* ~20px */
+      } /* Card titles will override text-align */
+
+      /* --- Layout: CSS Grid --- */
+      .dashboard-container {
+        display: grid;
+        gap: var(--gap-large);
+        grid-template-columns: 1fr; /* Mobile-first: single column */
+      }
+
+      @media (min-width: 768px) {
+        /* Tablets and small desktops */
+        .dashboard-container {
+          grid-template-columns: repeat(
+            auto-fit,
+            minmax(340px, 1fr)
+          ); /* More flexible grid */
+        }
+      }
+
+      @media (min-width: 1200px) {
+        /* Larger desktops */
+        .dashboard-container {
+          grid-template-columns: repeat(
+            2,
+            1fr
+          ); /* Revert to 2 columns for very wide screens if preferred, or keep auto-fit */
+        }
+      }
+
+      /* --- Card Styling --- */
+      .card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border-color);
+        border-radius: var(--border-radius-md);
+        padding: var(--gap-medium);
+        box-shadow: var(--card-shadow);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden; /* Important for child elements like charts */
+        transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out; /* Subtle hover effect */
+      }
+
+      .card:hover {
+        /* box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); */ /* Optional: slightly more pronounced shadow on hover */
+        /* transform: translateY(-2px); */ /* Optional: slight lift on hover */
+      }
+
+      .card-title {
+        font-size: 1.125rem; /* ~18px */
+        font-weight: 600;
+        margin-bottom: var(--gap-medium);
+        padding-bottom: var(--gap-small);
+        border-bottom: 1px solid var(--divider-color);
+        text-align: left; /* Override global heading text-align */
+        color: var(--text-primary);
+      }
+
+      /* --- Chart Containers --- */
+      /* This card contains multiple time-series charts */
+      .card > .chart-js-container {
+        position: relative;
+        width: 100%; /* Take full width of card column */
+        aspect-ratio: 16 / 9; /* Common aspect ratio, adjust as needed */
+        min-height: 200px; /* Ensure charts are not too small */
+        margin-bottom: var(--gap-medium);
+      }
+      .card > .chart-js-container:last-child {
+        margin-bottom: 0;
+      }
+
+      /* This card contains a .bubble-chart-container which then holds multiple bubble charts */
+      .bubble-chart-container {
+        display: flex;
+        flex-direction: column; /* Stack bubble charts vertically by default */
+        gap: var(--gap-medium);
+        width: 100%;
+      }
+
+      .bubble-chart-wrapper {
+        position: relative;
+        width: 100%; /* Take full width of its container */
+        aspect-ratio: 4 / 3; /* Adjust aspect ratio for bubble charts */
+        min-height: 250px;
+      }
+
+      .bubble-chart-wrapper p {
+        /* Titles above bubble charts */
+        font-size: 0.875rem; /* ~14px */
+        color: var(--text-secondary);
+        text-align: center;
+        margin-bottom: var(--gap-small);
+        font-weight: 500;
+      }
+
+      /* On larger screens, arrange chart containers side-by-side if they are direct children of a card
+   and there are multiple of them.
+   The HTML structure for "Lịch sử Tọa độ" has 3 .chart-js-container directly in .card.
+   The HTML structure for "Tương quan Tọa độ Tức thời" has .bubble-chart-container > .bubble-chart-wrapper.
+*/
+      @media (min-width: 992px) {
+        /* For larger screens, display charts in a row if applicable */
+        .card:has(> .chart-js-container + .chart-js-container) {
+          /* Card with multiple time series charts */
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: var(--gap-medium);
+          align-items: start; /* Align items to the start of the grid area */
+        }
+        .card:has(> .chart-js-container + .chart-js-container)
+          > .chart-js-container {
+          margin-bottom: 0; /* Remove bottom margin as gap handles spacing */
+        }
+
+        .bubble-chart-container {
+          /* Container for bubble charts */
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: var(--gap-medium);
+        }
+      }
+
+      /* --- 3D Radar Area (Plotly) --- */
+      #radar3D {
+        width: 100%;
+        min-height: 300px; /* Increased min-height for better visibility */
+        aspect-ratio: 1 / 0.8; /* Keep original aspect ratio or adjust */
+        border: 1px solid var(--card-border-color);
+        border-radius: var(--border-radius-sm);
+        background-color: var(
+          --primary-bg
+        ); /* Match page background or a slightly lighter shade */
+      }
+
+      #radarValues {
+        text-align: center;
+        margin-top: var(--gap-small);
+        font-size: 0.9375rem; /* ~15px */
+        color: var(--text-primary);
+        font-weight: 500;
+      }
+
+      /* --- Map --- */
+      #map {
+        min-height: 300px; /* Increased min-height */
+        aspect-ratio: 1 / 0.8; /* Keep original aspect ratio or adjust */
+        width: 100%;
+        border: 1px solid var(--card-border-color);
+        border-radius: var(--border-radius-sm);
+        background-color: #e0e0e0; /* A neutral placeholder background for the map */
+        margin-top: 0;
+      }
+      #map .leaflet-popup-content-wrapper {
+        border-radius: var(--border-radius-sm);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+      #map .leaflet-popup-content {
+        font-size: 0.875rem;
+      }
+      #map .leaflet-control-zoom,
+      #map .leaflet-control-scale {
+        border: 1px solid var(--card-border-color) !important;
+        box-shadow: var(--card-shadow) !important;
+      }
+      /* Style for the map error overlay added by JS */
+      #map-error-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(220, 53, 69, 0.85); /* --danger-bg with opacity */
+        color: white;
+        padding: var(--gap-small);
+        text-align: center;
+        z-index: 1000; /* Ensure it's above map tiles */
+        font-size: 0.875rem;
+        border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0; /* Rounded top corners if map has border */
+      }
+
+      /* --- Info Displays --- */
+      .info-section {
+        margin-top: var(--gap-medium);
+        padding-top: var(--gap-medium);
+        border-top: 1px solid var(--divider-color);
+      }
+
+      p.radar-info {
+        margin: var(--gap-small) 0;
+        text-align: center;
+        font-size: 0.8125rem; /* ~13px */
+        color: var(--text-secondary);
+      }
+
+      /* --- Responsive Adjustments for smaller screens --- */
+      @media (max-width: 767px) {
+        body {
+          padding: var(--gap-medium); /* Reduce body padding on mobile */
+        }
+
+        .dashboard-container {
+          gap: var(--gap-medium); /* Reduce gap between cards on mobile */
+        }
+
+        .card {
+          padding: var(--gap-medium);
+        }
+
+        .card-title,
+        h3 {
+          /* Target card titles and other h3s if any */
+          font-size: 1rem; /* ~16px, slightly smaller for mobile */
+        }
+
+        /* Ensure chart containers stack nicely and take appropriate space */
+        .chart-js-container,
+        .bubble-chart-wrapper {
+          width: 100%;
+          aspect-ratio: 16 / 10; /* Adjust aspect ratio for mobile, more height */
+          min-height: 220px;
+          margin-bottom: var(--gap-medium); /* Ensure spacing when stacked */
+        }
+        .chart-js-container:last-child,
+        .bubble-chart-wrapper:last-child {
+          margin-bottom: 0;
+        }
+
+        .bubble-chart-container {
+          flex-direction: column;
+          align-items: center;
+        }
+        .bubble-chart-container > .bubble-chart-wrapper {
+          margin-bottom: var(--gap-medium); /* Add margin if not last child */
+        }
+        .bubble-chart-container > .bubble-chart-wrapper:last-child {
+          margin-bottom: 0;
+        }
+
+        .bubble-chart-wrapper p {
+          font-size: 0.8125rem; /* ~13px */
+        }
+
+        #radarValues {
+          font-size: 0.875rem; /* ~14px */
+        }
+        p.radar-info {
+          font-size: 0.75rem; /* ~12px */
+        }
+
+        #map,
+        #radar3D {
+          min-height: 250px; /* Slightly smaller min-height on mobile */
+          aspect-ratio: 1 / 0.7; /* Adjust aspect ratio for mobile */
+        }
+      }
+
+      /* --- Styling for WebSocket error/status messages (if they are direct children of body) --- */
+      /* These are added via JS, so selectors might need adjustment based on actual DOM insertion */
+      body > p[style*="background:orange"],
+      body > p[style*="background:red"] {
+        padding: var(--gap-medium) !important;
+        margin: 0 0 var(--gap-medium) 0 !important; /* Add margin below if it's at the top */
+        text-align: center !important;
+        font-weight: 500 !important;
+        border-radius: var(--border-radius-sm);
+        color: var(--text-primary) !important; /* Ensure high contrast text */
+      }
+
+      body > p[style*="background:orange"] {
+        background-color: var(--warning-bg) !important; /* Use CSS variable */
+      }
+
+      body > p[style*="background:red"] {
+        background-color: var(--danger-bg) !important; /* Use CSS variable */
+        color: white !important; /* White text on dark red for better contrast */
+      }
+
+      /* Ensure Plotly chart background matches the theme */
+      .js-plotly-plot .plotly .bg {
+        fill: var(
+          --primary-bg
+        ) !important; /* Or var(--card-bg) if preferred inside card */
+      }
+      .js-plotly-plot .plotly .gridlayer .grid path {
+        stroke: var(--divider-color) !important; /* Lighter grid lines */
+      }
+      .js-plotly-plot .plotly .zeroline {
+        stroke: var(--text-secondary) !important; /* More prominent zero line */
+      }
+      .js-plotly-plot .plotly text {
+        fill: var(--text-secondary) !important; /* Axis labels, titles */
+        font-family: "Inter", sans-serif !important;
+      }
+
+      /* Chart.js Global Font Configuration (if not set by JS, this can help) */
+      /* Note: Chart.js often takes font settings from its JS config.
+   This is a general attempt; specific JS config is more reliable. */
+      canvas {
+        /* Generic canvas styling, might affect other canvases if any */
+        /* border: 1px solid var(--divider-color); */ /* Optional: if charts need a border */
+        border-radius: var(--border-radius-sm);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <div class="card">
+        <h3 class="card-title">Vị trí</h3>
+        <div id="map">Đang tải bản đồ...</div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">Trực quan hóa Radar 3D (Plotly)</h3>
+        <div id="radar3D"></div>
+        <div class="info-section">
+          <div id="radarValues">Tọa độ: N/A</div>
+          <p class="radar-info">
+            Phòng: 500x500x500 - Gốc (0,0,0) ở trên, Z hướng xuống
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">Lịch sử Tọa độ</h3>
+        <!-- <p style="font-size: 0.8em; color: #555; text-align:center; margin-bottom: 10px;">(Kích thước điểm x,y,z ~ r: 2-8px)</p> -->
+        <div class="chart-js-container"><canvas id="xChart"></canvas></div>
+        <div class="chart-js-container"><canvas id="yChart"></canvas></div>
+        <div class="chart-js-container"><canvas id="zChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">Tương quan Tọa độ Tức thời</h3>
+        <div class="bubble-chart-container">
+          <div class="bubble-chart-wrapper">
+            <p><b>YX</b> (Trục tung ~ X(t))</p>
+            <canvas id="yxBubbleChart"></canvas>
+          </div>
+          <div class="bubble-chart-wrapper">
+            <p><b>ZY</b> (Trục tung ~ Y(t))</p>
+            <canvas id="zyBubbleChart"></canvas>
+          </div>
+          <div class="bubble-chart-wrapper">
+            <p><b>XZ</b> (Trục tung ~ Z(t))</p>
+            <canvas id="xzBubbleChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // --- Constants and Config ---
+        const MAX_HISTORY_POINTS = 30; // Maximum number of points to show in history charts
+        const ROOM_SIZE = 500; // Size of the room dimensions (used for axis limits)
+        const MIN_RADIUS = 0.5; // Minimum expected radius value from sensor
+        const MAX_RADIUS = 50; // Maximum expected radius value from sensor
+        const MIN_POINT_RADIUS = 2; // Minimum visual size for points in Chart.js
+        const MAX_POINT_RADIUS = 8; // Maximum visual size for points in Chart.js
+        const chartColors = {
+          x: "rgb(255, 0, 0)",
+          y: "rgb(0, 255, 0)",
+          z: "rgb(0, 0, 255)",
+        }; // Colors for time series charts
+        const bubbleColorX = "rgba(255, 0, 0, 0.6)"; // Color for YX bubble chart
+        const bubbleColorY = "rgba(0, 255, 0, 0.6)"; // Color for ZY bubble chart
+        const bubbleColorZ = "rgba(0, 0, 255, 0.6)"; // Color for XZ bubble chart
+        const bubbleBorderColor = "rgb(108, 117, 125)"; // Border color for bubble charts
+
+        // --- Global Variables ---
+        let xChart, yChart, zChart; // Chart.js instances for time series
+        let yxBubbleChart, zyBubbleChart, xzBubbleChart; // Chart.js instances for bubble charts
+        let map; // Leaflet map instance
+        let radarHistory = []; // Array to store recent radar data points
+        let radarPlotlyInitialized = false; // Flag to check if Plotly chart is initialized
+
+        // --- Helper Functions ---
+        // Maps sensor radius (r) to visual point radius for Chart.js line charts
+        function mapRtoPointRadius(r) {
+          const normalizedR = Math.max(
+            0,
+            Math.min(1, (r - MIN_RADIUS) / (MAX_RADIUS - MIN_RADIUS))
+          );
+          const pointRadius =
+            MIN_POINT_RADIUS +
+            normalizedR * (MAX_POINT_RADIUS - MIN_POINT_RADIUS);
+          return Math.max(
+            MIN_POINT_RADIUS,
+            Math.min(MAX_POINT_RADIUS, pointRadius)
+          );
+        }
+        // Maps sensor radius (r) to marker size for Plotly 3D chart
+        function convertRadiusToPlotlySize(r) {
+          // Simple linear mapping (adjust coefficients as needed for visual preference)
+          // Example: maps r=[0.5, 50] to size=[~3, ~10]
+          const scale = (10 - 3) / (MAX_RADIUS - MIN_RADIUS);
+          const offset = 3 - scale * MIN_RADIUS;
+          return Math.max(3, scale * r + offset); // Ensure minimum size
+        }
+
+        // --- Initialization Functions ---
+        // Initializes the three time series line charts (X, Y, Z vs. Time)
+        function initTimeSeriesCharts() {
+          const commonOptions = (label, minVal, maxVal, showTime = true) => ({
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false, // Disable animation for real-time updates
+            interaction: { mode: "index", intersect: false }, // Tooltip behavior
+            scales: {
+              x: {
+                // Time axis
+                ticks: {
+                  display: showTime,
+                  maxRotation: 0,
+                  autoSkip: true,
+                  maxTicksLimit: 6,
+                  font: { size: 9 },
+                },
+                grid: { display: true },
+              },
+              y: {
+                // Value axis (X, Y, or Z)
+                title: { display: true, text: label, font: { size: 10 } },
+                min: minVal,
+                max: maxVal,
+                ticks: { stepSize: 100, font: { size: 9 } },
+                grid: { display: true },
+              },
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                bodyFont: { size: 10 },
+                titleFont: { size: 10 },
+                displayColors: false,
+              },
+            },
+          });
+          // Function to dynamically set point radius based on 'r' value stored in dataset
+          const pointRadiusFunc = (context) => {
+            const idx = context.dataIndex;
+            return (
+              (context.dataset.pointRadii && context.dataset.pointRadii[idx]) ||
+              0
+            ); // Default to 0 if no radius data
+          };
+          const pointOptions = {
+            elements: {
+              point: {
+                radius: pointRadiusFunc,
+                hoverRadius: (ctx) => pointRadiusFunc(ctx) + 2,
+                borderWidth: 0,
+              },
+            },
+          };
+
+          const xCtx = document.getElementById("xChart")?.getContext("2d");
+          const yCtx = document.getElementById("yChart")?.getContext("2d");
+          const zCtx = document.getElementById("zChart")?.getContext("2d");
+          let success = true; // Flag to track initialization success
+
+          // Create X chart
+          if (xCtx)
+            xChart = new Chart(xCtx, {
+              type: "line",
+              data: {
+                labels: [],
+                datasets: [
+                  {
+                    label: "X",
+                    data: [],
+                    borderColor: chartColors.x,
+                    borderWidth: 1.5,
+                    pointRadii: [],
+                  },
+                ],
+              },
+              options: { ...commonOptions("X", 0, ROOM_SIZE), ...pointOptions },
+            });
+          else {
+            console.error("xChart canvas not found");
+            success = false;
+          }
+          // Create Y chart
+          if (yCtx)
+            yChart = new Chart(yCtx, {
+              type: "line",
+              data: {
+                labels: [],
+                datasets: [
+                  {
+                    label: "Y",
+                    data: [],
+                    borderColor: chartColors.y,
+                    borderWidth: 1.5,
+                    pointRadii: [],
+                  },
+                ],
+              },
+              options: { ...commonOptions("Y", 0, ROOM_SIZE), ...pointOptions },
+            });
+          else {
+            console.error("yChart canvas not found");
+            success = false;
+          }
+          // Create Z chart
+          if (zCtx)
+            zChart = new Chart(zCtx, {
+              type: "line",
+              data: {
+                labels: [],
+                datasets: [
+                  {
+                    label: "Z",
+                    data: [],
+                    borderColor: chartColors.z,
+                    borderWidth: 1.5,
+                    pointRadii: [],
+                  },
+                ],
+              },
+              options: { ...commonOptions("Z", 0, ROOM_SIZE), ...pointOptions },
+            });
+          else {
+            console.error("zChart canvas not found");
+            success = false;
+          }
+
+          return success;
+        }
+
+        // Initializes the three bubble charts (YX, ZY, XZ correlations)
+        function initBubbleCharts() {
+          const commonBubbleOptions = (
+            xLabel,
+            yLabel,
+            xMin,
+            xMax,
+            yMin,
+            yMax
+          ) => ({
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false, // Disable animation
+            scales: {
+              x: {
+                // Horizontal axis
+                min: xMin,
+                max: xMax,
+                title: { display: true, text: xLabel, font: { size: 10 } },
+                ticks: { stepSize: 100, font: { size: 9 } },
+                grid: { display: true },
+              },
+              y: {
+                // Vertical axis
+                min: yMin,
+                max: yMax,
+                title: { display: true, text: yLabel, font: { size: 10 } },
+                ticks: { stepSize: 100, font: { size: 9 } },
+                grid: { display: true },
+              },
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: { enabled: true, callbacks: {} },
+            }, // Enable tooltips, callbacks added below
+          });
+
+          // Custom tooltip formatter for bubble charts
+          const tooltipCallback = (context) => {
+            const dataPoint = context.raw; // The {x, y, r} data point
+            const lastHistory = radarHistory[radarHistory.length - 1]; // Get the most recent full data point
+            let original_r = lastHistory ? lastHistory.r : 0; // Extract the original 'r' value
+            // Format tooltip based on which chart it is
+            if (context.chart.canvas.id === "yxBubbleChart")
+              return `Y: ${dataPoint.x.toFixed(1)}, X: ${dataPoint.y.toFixed(
+                1
+              )}, r: ${original_r.toFixed(1)}`;
+            if (context.chart.canvas.id === "zyBubbleChart")
+              return `Z: ${dataPoint.x.toFixed(1)}, Y: ${dataPoint.y.toFixed(
+                1
+              )}, r: ${original_r.toFixed(1)}`;
+            if (context.chart.canvas.id === "xzBubbleChart")
+              return `X: ${dataPoint.x.toFixed(1)}, Z: ${dataPoint.y.toFixed(
+                1
+              )}, r: ${original_r.toFixed(1)}`;
+            return ""; // Default empty tooltip
+          };
+
+          const yxCtx = document
+            .getElementById("yxBubbleChart")
+            ?.getContext("2d");
+          const zyCtx = document
+            .getElementById("zyBubbleChart")
+            ?.getContext("2d");
+          const xzCtx = document
+            .getElementById("xzBubbleChart")
+            ?.getContext("2d");
+          let success = true; // Flag for initialization success
+          const initialBubblePoint = {
+            x: 0,
+            y: 0,
+            r: convertRadiusToPlotlySize(MIN_RADIUS),
+          }; // Initial dummy point
+
+          // Create YX bubble chart
+          const yxOptions = commonBubbleOptions(
+            "Y",
+            "X",
+            0,
+            ROOM_SIZE,
+            0,
+            ROOM_SIZE
+          );
+          yxOptions.plugins.tooltip.callbacks.label = tooltipCallback; // Assign custom tooltip
+          if (yxCtx)
+            yxBubbleChart = new Chart(yxCtx, {
+              type: "bubble",
+              data: {
+                datasets: [
+                  {
+                    label: "YX",
+                    data: [initialBubblePoint],
+                    backgroundColor: bubbleColorX,
+                    borderColor: bubbleBorderColor,
+                  },
+                ],
+              },
+              options: yxOptions,
+            });
+          else {
+            console.error("yxBubbleChart canvas not found");
+            success = false;
+          }
+
+          // Create ZY bubble chart
+          const zyOptions = commonBubbleOptions(
+            "Z",
+            "Y",
+            0,
+            ROOM_SIZE,
+            0,
+            ROOM_SIZE
+          );
+          zyOptions.plugins.tooltip.callbacks.label = tooltipCallback; // Assign custom tooltip
+          if (zyCtx)
+            zyBubbleChart = new Chart(zyCtx, {
+              type: "bubble",
+              data: {
+                datasets: [
+                  {
+                    label: "ZY",
+                    data: [initialBubblePoint],
+                    backgroundColor: bubbleColorY,
+                    borderColor: bubbleBorderColor,
+                  },
+                ],
+              },
+              options: zyOptions,
+            });
+          else {
+            console.error("zyBubbleChart canvas not found");
+            success = false;
+          }
+
+          // Create XZ bubble chart
+          const xzOptions = commonBubbleOptions(
+            "X",
+            "Z",
+            0,
+            ROOM_SIZE,
+            0,
+            ROOM_SIZE
+          );
+          xzOptions.plugins.tooltip.callbacks.label = tooltipCallback; // Assign custom tooltip
+          if (xzCtx)
+            xzBubbleChart = new Chart(xzCtx, {
+              type: "bubble",
+              data: {
+                datasets: [
+                  {
+                    label: "XZ",
+                    data: [initialBubblePoint],
+                    backgroundColor: bubbleColorZ,
+                    borderColor: bubbleBorderColor,
+                  },
+                ],
+              },
+              options: xzOptions,
+            });
+          else {
+            console.error("xzBubbleChart canvas not found");
+            success = false;
+          }
+
+          return success;
+        }
+
+        // Initializes the Plotly 3D scatter plot
+        function initPlotly3D() {
+          const radarDiv = document.getElementById("radar3D");
+          if (!radarDiv || typeof Plotly === "undefined") {
+            console.error("Plotly container or library not found.");
+            return false;
+          }
+          try {
+            const origin = { x: 0, y: 0, z: 0 }; // Origin point
+            // Initial values for the first point shown
+            let initX = 0,
+              initY = 0,
+              initZ = 0;
+            let initMarkerSize = convertRadiusToPlotlySize(MIN_RADIUS); // Use helper function for size
+
+            // Data trace for the radar point
+            const radarTrace = {
+              x: [initX],
+              y: [initY],
+              z: [initZ],
+              mode: "markers",
+              marker: { size: initMarkerSize, color: "red" }, // Set initial size and color
+              type: "scatter3d",
+              name: "Radar",
+            };
+            // Data trace for the origin point (optional, for reference)
+            const originTrace = {
+              x: [origin.x],
+              y: [origin.y],
+              z: [origin.z],
+              mode: "markers+text", // Show marker and text
+              marker: { size: 8, color: "black" },
+              text: ["O"],
+              textposition: "top center", // Label the origin
+              type: "scatter3d",
+              name: "Origin",
+            };
+
+            // Layout configuration for the 3D scene
+            const layout = {
+              margin: { l: 0, r: 0, b: 0, t: 0 }, // Minimize margins
+              scene: {
+                aspectmode: "cube", // Keep aspect ratio cubic
+                xaxis: {
+                  title: "X",
+                  range: [0, ROOM_SIZE],
+                  backgroundcolor: "rgb(230, 230,230)",
+                  gridcolor: "rgb(255, 255, 255)",
+                  showbackground: true,
+                  zerolinecolor: "rgb(0, 0, 0)",
+                },
+                yaxis: {
+                  title: "Y",
+                  range: [0, ROOM_SIZE],
+                  backgroundcolor: "rgb(230, 230,230)",
+                  gridcolor: "rgb(255, 255, 255)",
+                  showbackground: true,
+                  zerolinecolor: "rgb(0, 0, 0)",
+                },
+                // *** Z-AXIS MODIFICATION HERE ***
+                zaxis: {
+                  title: "Z (Hướng xuống)", // Updated title
+                  range: [ROOM_SIZE, 0], // Reversed range [max, min] to make it point down
+                  backgroundcolor: "rgb(230, 230,230)",
+                  gridcolor: "rgb(255, 255, 255)",
+                  showbackground: true,
+                  zerolinecolor: "rgb(0, 0, 0)",
+                },
+                // Optional: Adjust camera if needed, but defaults often work well
+                // camera: {
+                //    up: {x: 0, y: 0, z: -1}, // Try setting 'up' direction if view is odd
+                //    eye: {x: 1.25, y: 1.25, z: 1.25} // Adjust starting viewpoint
+                // }
+              },
+              paper_bgcolor: "#f4f7f9", // Match body background
+              plot_bgcolor: "#f4f7f9", // Match body background
+            };
+            const config = { responsive: true, displayModeBar: false }; // Make responsive, hide mode bar
+
+            // Create the Plotly chart
+            Plotly.newPlot(
+              "radar3D",
+              [radarTrace, originTrace],
+              layout,
+              config
+            );
+            radarPlotlyInitialized = true; // Mark as initialized
+            updateRadarDisplay(initX, initY, initZ, MIN_RADIUS); // Update the text display initially
+            return true;
+          } catch (error) {
+            console.error("Error initializing Plotly 3D chart:", error);
+            return false;
+          }
+        }
+
+        // Updates the text display showing current coordinates
+        function updateRadarDisplay(x, y, z, r) {
+          const el = document.getElementById("radarValues");
+          if (el) {
+            el.innerText = `Tọa độ: x: ${x.toFixed(1)}, y: ${y.toFixed(
+              1
+            )}, z: ${z.toFixed(1)}, r: ${r.toFixed(1)}`;
+          }
+        }
+
+        // Initializes the Leaflet map
+        function initMap() {
+          const mapDiv = document.getElementById("map");
+          if (!mapDiv) {
+            console.error("Map container not found");
+            return false;
+          }
+          try {
+            const defaultCoords = [10.7769, 106.7009]; // Default to HCMC center
+            const defaultZoom = 15; // Default zoom level
+            // Remove existing map if re-initializing
+            if (map) {
+              map.remove();
+              map = null;
+            }
+            // Create map instance
+            map = L.map("map", { zoomControl: false }).setView(
+              defaultCoords,
+              defaultZoom
+            );
+            // Add OpenStreetMap tile layer
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+              maxZoom: 18,
+              attribution:
+                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            }).addTo(map);
+            // Add scale control
+            L.control.scale({ imperial: false }).addTo(map);
+            // Add zoom control to bottom right
+            L.control.zoom({ position: "bottomright" }).addTo(map);
+            // Add a default marker
+            L.marker(defaultCoords)
+              .addTo(map)
+              .bindPopup("Trung tâm TP.HCM (Mặc định)")
+              .openPopup();
+
+            // Try to get user's current location
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  // Success callback
+                  const realCoords = [
+                    position.coords.latitude,
+                    position.coords.longitude,
+                  ];
+                  map.setView(realCoords, defaultZoom); // Center map on user location
+                  // Remove default marker and add user location marker
+                  map.eachLayer((layer) => {
+                    if (layer instanceof L.Marker) map.removeLayer(layer);
+                  });
+                  L.marker(realCoords)
+                    .addTo(map)
+                    .bindPopup("Vị trí của bạn")
+                    .openPopup();
+                },
+                (error) => {
+                  // Error callback
+                  console.warn("Không thể lấy vị trí thực tế:", error.message);
+                  showMapError(error); // Display error message on map
+                },
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 } // Geolocation options
+              );
+            } else {
+              // Geolocation not supported
+              mapDiv.innerHTML =
+                "<p style='text-align:center; padding: 10px;'>Geolocation không được hỗ trợ.</p>";
+            }
+          } catch (error) {
+            // Catch any other map initialization errors
+            console.error("Error initializing map:", error);
+            mapDiv.innerHTML =
+              "<p style='text-align:center; padding: 10px; color: red;'>Lỗi khởi tạo bản đồ.</p>";
+            return false;
+          }
+          return true;
+        }
+
+        // --- Event Handlers ---
+        // Displays geolocation errors on the map overlay
+        function showMapError(error) {
+          const mapDiv = document.getElementById("map");
+          if (!mapDiv) return;
+          let message = "Lỗi không xác định khi lấy vị trí.";
+          // Determine error message based on error code
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              message = "Đã từ chối truy cập vị trí.";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              message = "Thông tin vị trí không khả dụng.";
+              break;
+            case error.TIMEOUT:
+              message = "Yêu cầu vị trí hết hạn.";
+              break;
+            case error.UNKNOWN_ERROR:
+              message = "Lỗi không rõ.";
+              break;
+          }
+          // Create or update an error overlay div
+          const errorDivId = "map-error-overlay";
+          let errorDiv = document.getElementById(errorDivId);
+          if (!errorDiv) {
+            errorDiv = document.createElement("div");
+            errorDiv.id = errorDivId;
+            // Style the overlay
+            errorDiv.style.cssText =
+              "position: absolute; top: 0; left: 0; width: 100%; background: rgba(255,0,0,0.7); color: white; padding: 5px; text-align: center; z-index: 1000; font-size: 0.8em;";
+            mapDiv.style.position = "relative"; // Ensure map container is positioned
+            mapDiv.appendChild(errorDiv);
+          }
+          errorDiv.textContent = message; // Set the error message text
+          console.error("Geolocation Error:", error.message);
+        }
+
+        // --- WebSocket Connection and Data Handling ---
+        // Establish WebSocket connection to the server running on the same host
+        const ws = new WebSocket(`ws://${window.location.host}`);
+
+        ws.onopen = () => {
+          console.log("WebSocket connection established");
+        };
+        ws.onerror = (error) => {
+          console.error("WebSocket Error:", error);
+          // Display error message to the user
+          document.body.insertAdjacentHTML(
+            "afterbegin",
+            `<p style='background:orange; color:black; padding:10px; text-align:center; font-weight:bold;'>Lỗi: Mất kết nối WebSocket đến server.</p>`
+          );
+        };
+        ws.onclose = () => {
+          console.log("WebSocket connection closed");
+          // Display connection closed message
+          document.body.insertAdjacentHTML(
+            "afterbegin",
+            `<p style='background:red; color:white; padding:10px; text-align:center; font-weight:bold;'>Lỗi: Kết nối WebSocket đã đóng.</p>`
+          );
+        };
+
+        // Handle incoming messages from the WebSocket server
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data); // Parse the JSON data
+            // Extract coordinates and radius
+            const newX = message.x;
+            const newY = message.y;
+            const newZ = message.z;
+            const newR = message.r; // Original radius value
+
+            // Validate data types
+            if (
+              typeof newX === "number" &&
+              typeof newY === "number" &&
+              typeof newZ === "number" &&
+              typeof newR === "number"
+            ) {
+              // Calculate visual sizes based on radius
+              const bubbleRadius = mapRtoPointRadius(newR); // Use mapRtoPointRadius for consistency in bubble charts
+              const pointRadius = mapRtoPointRadius(newR); // For time series charts
+              // const markerSize3D = convertRadiusToPlotlySize(newR); // Use dedicated function for Plotly size
+              const timeLabel = new Date().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              }); // Timestamp for charts
+
+              // 1. Update Plotly 3D Radar
+              if (radarPlotlyInitialized && typeof Plotly !== "undefined") {
+                // Use Plotly.restyle for efficient updates
+                Plotly.restyle(
+                  "radar3D",
+                  {
+                    x: [[newX]], // Data needs to be nested arrays
+                    y: [[newY]],
+                    z: [[newZ]],
+                    "marker.size": [[newR]], // Update marker size
+                  },
+                  [0]
+                ); // Target the first trace (index 0, which is radarTrace)
+              }
+              updateRadarDisplay(newX, newY, newZ, newR); // Update the coordinate text display
+
+              // 2. Update Bubble Charts
+              // Update the single data point in each bubble chart
+              if (yxBubbleChart) {
+                yxBubbleChart.data.datasets[0].data[0] = {
+                  x: newY,
+                  y: newX,
+                  r: bubbleRadius,
+                };
+                yxBubbleChart.update("none");
+              } // 'none' prevents animation
+              if (zyBubbleChart) {
+                zyBubbleChart.data.datasets[0].data[0] = {
+                  x: newZ,
+                  y: newY,
+                  r: bubbleRadius,
+                };
+                zyBubbleChart.update("none");
+              }
+              if (xzBubbleChart) {
+                xzBubbleChart.data.datasets[0].data[0] = {
+                  x: newX,
+                  y: newZ,
+                  r: bubbleRadius,
+                };
+                xzBubbleChart.update("none");
+              }
+
+              // 3. Update Time Series Charts
+              const charts = [xChart, yChart, zChart];
+              const dataValues = [newX, newY, newZ];
+              charts.forEach((chart, index) => {
+                if (chart) {
+                  try {
+                    // Add new data point
+                    chart.data.labels.push(timeLabel);
+                    chart.data.datasets[0].data.push(dataValues[index]);
+                    // Ensure pointRadii array exists and add new radius
+                    if (!chart.data.datasets[0].pointRadii)
+                      chart.data.datasets[0].pointRadii = [];
+                    chart.data.datasets[0].pointRadii.push(pointRadius);
+
+                    // Remove oldest data point if history limit is reached
+                    if (chart.data.labels.length > MAX_HISTORY_POINTS) {
+                      chart.data.labels.shift();
+                      chart.data.datasets[0].data.shift();
+                      chart.data.datasets[0].pointRadii?.shift(); // Use optional chaining
+                    }
+                    chart.update("none"); // Update chart without animation
+                  } catch (chartError) {
+                    console.error(
+                      `Lỗi cập nhật biểu đồ ${chart.canvas.id}:`,
+                      chartError
+                    );
+                  }
+                }
+              });
+
+              // 4. Update Radar History (used for bubble chart tooltips)
+              const newDataPoint = {
+                time: timeLabel,
+                x: newX,
+                y: newY,
+                z: newZ,
+                r: newR,
+                pointRadius: pointRadius,
+              };
+              radarHistory.push(newDataPoint);
+              if (radarHistory.length > MAX_HISTORY_POINTS)
+                radarHistory.shift(); // Keep history size limited
+            } else {
+              console.warn(
+                "Dữ liệu nhận được từ WebSocket không hợp lệ:",
+                message
+              );
+            }
+          } catch (error) {
+            console.error("Lỗi xử lý tin nhắn WebSocket:", error);
+            console.error("Dữ liệu gốc:", event.data);
+          }
+        };
+
+        // --- Start Execution ---
+        // Initialize all components when the DOM is ready
+        try {
+          let tsChartsOk = initTimeSeriesCharts();
+          let bubbleChartsOk = initBubbleCharts();
+          let plotlyOk = initPlotly3D(); // Initialize Plotly
+          let mapOk = initMap();
+
+          // Log success or failure of initialization
+          if (tsChartsOk && bubbleChartsOk && plotlyOk && mapOk) {
+            // Check all components
+            console.log("Các thành phần dashboard đã khởi tạo thành công.");
+          } else {
+            console.error(
+              "Khởi tạo thành phần dashboard thất bại. Dashboard có thể không hoạt động đúng."
+            );
+            // Display error message if core components fail
+            document.body.insertAdjacentHTML(
+              "afterbegin",
+              `<p style='background:red; color:white; padding:10px; text-align:center; font-weight:bold;'>Lỗi: Không thể khởi tạo một số thành phần chính của Dashboard.</p>`
+            );
+          }
+        } catch (error) {
+          // Catch critical errors during setup
+          console.error("CRITICAL Error during initial setup:", error);
+          // Display a critical error message to the user
+          document.body.innerHTML = `<p style='color:red; text-align:center; padding: 20px;'>Đã xảy ra lỗi nghiêm trọng khi tải Dashboard. Vui lòng kiểm tra Console (F12).</p>`;
+        }
+      }); // End DOMContentLoaded
+    </script>
+  </body>
+</html>

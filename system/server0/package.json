@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "aedes": "^0.51.3",
+    "ip": "^2.0.1",
+    "json2csv": "^6.0.0-alpha.2"
+  }
+}

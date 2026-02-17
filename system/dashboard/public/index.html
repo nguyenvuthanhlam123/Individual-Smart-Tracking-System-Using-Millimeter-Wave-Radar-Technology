@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IoT Dashboard - Plotly 3D</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <div class="card">
+        <h3 class="card-title">Vị trí</h3>
+        <div id="map">Đang tải bản đồ...</div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">Trực quan hóa Radar 3D (Plotly)</h3>
+        <div id="radar3D"></div>
+        <div class="info-section">
+          <div id="radarValues">Tọa độ: N/A</div>
+          <p class="radar-info">
+            Phòng: 500x500x500 - Gốc (0,0,0) ở trên, Z hướng xuống
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">Lịch sử Tọa độ</h3>
+        <div class="chart-js-container"><canvas id="xChart"></canvas></div>
+        <div class="chart-js-container"><canvas id="yChart"></canvas></div>
+        <div class="chart-js-container"><canvas id="zChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">Tương quan Tọa độ Tức thời</h3>
+        <div class="bubble-chart-container">
+          <div class="bubble-chart-wrapper">
+            <p><b>YX</b> (Trục tung ~ X(t))</p>
+            <canvas id="yxBubbleChart"></canvas>
+          </div>
+          <div class="bubble-chart-wrapper">
+            <p><b>ZY</b> (Trục tung ~ Y(t))</p>
+            <canvas id="zyBubbleChart"></canvas>
+          </div>
+          <div class="bubble-chart-wrapper">
+            <p><b>XZ</b> (Trục tung ~ Z(t))</p>
+            <canvas id="xzBubbleChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+
+    <script src="script.js"></script>
+  </body>
+</html>

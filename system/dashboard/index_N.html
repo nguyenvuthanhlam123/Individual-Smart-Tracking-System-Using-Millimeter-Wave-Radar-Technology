@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IoT Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f9f9f9;
+      }
+      h1,
+      h2 {
+        text-align: center;
+      }
+      .container {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      @media (min-width: 800px) {
+        .container {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      canvas {
+        width: 100% !important;
+        height: auto !important;
+      }
+      #radarValues {
+        text-align: center;
+        margin-top: 10px;
+        font-size: 18px;
+        color: #333;
+      }
+      .projection-chart,
+      .line-chart {
+        width: 100% !important;
+        height: 200px;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>IoT Dashboard</h1>
+    <div class="container">
+      <div class="card">
+        <h2>Sensor Data</h2>
+        <canvas id="sensorChart"></canvas>
+      </div>
+      <div class="card">
+        <h2>3D Radar Position</h2>
+        <div id="radar3D" style="width: 100%; height: 400px"></div>
+        <div id="radarValues"></div>
+      </div>
+      <div class="card">
+        <h2>Coordinate History</h2>
+        <canvas id="xLineChart" class="line-chart"></canvas>
+        <canvas id="yLineChart" class="line-chart"></canvas>
+        <canvas id="zLineChart" class="line-chart"></canvas>
+      </div>
+      <div class="card">
+        <h2>2D Projections</h2>
+        <canvas id="zxChart" class="projection-chart"></canvas>
+        <canvas id="xyChart" class="projection-chart"></canvas>
+        <canvas id="yzChart" class="projection-chart"></canvas>
+      </div>
+    </div>
+
+    <script>
+      // Thiết lập kết nối WebSocket
+      const ws = new WebSocket("ws://localhost:3000");
+      ws.onmessage = function (event) {
+        try {
+          const payload = JSON.parse(event.data);
+          // Sử dụng kiểm tra kiểu số để đảm bảo giá trị 0 được nhận đúng
+          if (
+            payload.data &&
+            typeof payload.data.x === "number" &&
+            typeof payload.data.y === "number" &&
+            typeof payload.data.z === "number" &&
+            typeof payload.data.r === "number"
+          ) {
+            const { x, y, z, r } = payload.data;
+            updateRadar(x, y, z, r);
+          }
+        } catch (error) {
+          console.error("Lỗi parse JSON:", error);
+        }
+      };
+
+      ws.onopen = function () {
+        console.log("Đã kết nối tới WebSocket server");
+      };
+
+      // Hàm chuyển đổi bán kính
+      function convertRadius(r) {
+        return (7 / 49.5) * r + 2.93;
+      }
+
+      // Biểu đồ Sensor Data
+      const sensorCtx = document.getElementById("sensorChart").getContext("2d");
+      const sensorChart = new Chart(sensorCtx, {
+        type: "line",
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: "Temperature (°C)",
+              data: [],
+              borderColor: "red",
+              backgroundColor: "rgba(255,0,0,0.1)",
+              fill: false,
+              tension: 0.1,
+            },
+            {
+              label: "Humidity (%)",
+              data: [],
+              borderColor: "blue",
+              backgroundColor: "rgba(0,0,255,0.1)",
+              fill: false,
+              tension: 0.1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          animation: false,
+          scales: {
+            x: { title: { display: true, text: "Time" } },
+            y: { title: { display: true, text: "Value" } },
+          },
+        },
+      });
+
+      // Biểu đồ 3D Radar
+      const origin = { x: 0, y: 0, z: 0 };
+      const radarTrace = {
+        x: [0],
+        y: [0],
+        z: [0],
+        mode: "markers",
+        marker: { size: 5, color: "red" },
+        type: "scatter3d",
+        name: "Radar",
+      };
+      const originTrace = {
+        x: [origin.x],
+        y: [origin.y],
+        z: [origin.z],
+        mode: "markers+text",
+        marker: { size: 8, color: "black" },
+        text: ["O"],
+        textposition: "top center",
+        type: "scatter3d",
+        name: "Origin",
+      };
+      Plotly.newPlot("radar3D", [radarTrace, originTrace], {
+        title: "Radar 3D Position",
+        scene: {
+          aspectmode: "cube",
+          xaxis: { title: "X", range: [0, 500] },
+          yaxis: { title: "Y", range: [0, 500] },
+          zaxis: { title: "Z", range: [500, 0] },
+        },
+      });
+
+      // Hàm cập nhật dữ liệu radar
+      function updateRadar(x, y, z, r) {
+        const dispR = convertRadius(r);
+        Plotly.update(
+          "radar3D",
+          { x: [[x]], y: [[y]], z: [[z]], "marker.size": [[dispR]] },
+          {},
+          [0]
+        );
+        document.getElementById("radarValues").innerText = `x: ${x.toFixed(
+          2
+        )}, y: ${y.toFixed(2)}, z: ${z.toFixed(2)}, r: ${r.toFixed(2)}`;
+
+        // Cập nhật biểu đồ 2D Projections
+        zxChart.data.datasets[0].data = [{ x: z, y: x, r: dispR }];
+        xyChart.data.datasets[0].data = [{ x: x, y: y, r: dispR }];
+        yzChart.data.datasets[0].data = [{ x: y, y: z, r: dispR }];
+        [zxChart, xyChart, yzChart].forEach((c) => c.update());
+
+        // Cập nhật Coordinate History
+        const t = new Date().toLocaleTimeString();
+        [xLineChart, yLineChart, zLineChart].forEach((chart) => {
+          chart.data.labels.push(t);
+          if (chart === xLineChart) {
+            chart.data.datasets[0].data.push(x);
+            chart.data.datasets[0].pointRadius.push(dispR);
+          } else if (chart === yLineChart) {
+            chart.data.datasets[0].data.push(y);
+            chart.data.datasets[0].pointRadius.push(dispR);
+          } else if (chart === zLineChart) {
+            chart.data.datasets[0].data.push(z);
+            chart.data.datasets[0].pointRadius.push(dispR);
+          }
+        });
+        if (xLineChart.data.labels.length > 10) {
+          [xLineChart, yLineChart, zLineChart].forEach((chart) => {
+            chart.data.labels.shift();
+            chart.data.datasets[0].data.shift();
+            chart.data.datasets[0].pointRadius.shift();
+          });
+        }
+        xLineChart.update();
+        yLineChart.update();
+        zLineChart.update();
+      }
+
+      // Biểu đồ 2D Projections với borderWidth = 1
+      const zxCtx = document.getElementById("zxChart").getContext("2d");
+      const zxChart = new Chart(zxCtx, {
+        type: "bubble",
+        data: {
+          datasets: [
+            {
+              label: "ZX Projection",
+              data: [],
+              backgroundColor: "rgba(255, 0, 0, 0.5)",
+              borderColor: "rgb(255, 0, 0)",
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          scales: {
+            x: { min: 0, max: 500, title: { display: true, text: "Z" } },
+            y: { min: 0, max: 500, title: { display: true, text: "X" } },
+          },
+        },
+      });
+
+      const xyCtx = document.getElementById("xyChart").getContext("2d");
+      const xyChart = new Chart(xyCtx, {
+        type: "bubble",
+        data: {
+          datasets: [
+            {
+              label: "XY Projection",
+              data: [],
+              backgroundColor: "rgba(0, 0, 255, 0.5)",
+              borderColor: "rgb(0, 0, 255)",
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          scales: {
+            x: { min: 0, max: 500, title: { display: true, text: "X" } },
+            y: { min: 0, max: 500, title: { display: true, text: "Y" } },
+          },
+        },
+      });
+
+      const yzCtx = document.getElementById("yzChart").getContext("2d");
+      const yzChart = new Chart(yzCtx, {
+        type: "bubble",
+        data: {
+          datasets: [
+            {
+              label: "YZ Projection",
+              data: [],
+              backgroundColor: "rgba(255, 165, 0, 0.5)",
+              borderColor: "rgb(255, 165, 0)",
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          scales: {
+            x: { min: 0, max: 500, title: { display: true, text: "Y" } },
+            y: { min: 0, max: 500, title: { display: true, text: "Z" } },
+          },
+        },
+      });
+
+      // Hàm tạo biểu đồ Coordinate History với pointBorderWidth = 1
+      function createLineChart(ctx, lbl, col) {
+        let backgroundColor, borderColor;
+        switch (col) {
+          case "red":
+            backgroundColor = "rgba(255, 0, 0, 0.5)";
+            borderColor = "rgb(255, 0, 0)";
+            break;
+          case "blue":
+            backgroundColor = "rgba(0, 0, 255, 0.5)";
+            borderColor = "rgb(0, 0, 255)";
+            break;
+          case "orange":
+            backgroundColor = "rgba(255, 165, 0, 0.5)";
+            borderColor = "rgb(255, 165, 0)";
+            break;
+          default:
+            backgroundColor = "rgba(0, 0, 0, 0.5)";
+            borderColor = "rgb(0, 0, 0)";
+        }
+        return new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: lbl,
+                data: [],
+                borderColor: borderColor,
+                backgroundColor: backgroundColor,
+                pointBackgroundColor: backgroundColor,
+                pointBorderColor: borderColor,
+                pointBorderWidth: 1,
+                fill: false,
+                tension: 0.1,
+                pointRadius: [],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            animation: false,
+            scales: {
+              x: { title: { display: true, text: "Time" } },
+              y: {
+                title: { display: true, text: lbl + "-coordinate" },
+                min: 0,
+                max: 500,
+              },
+            },
+          },
+        });
+      }
+
+      const xLineChart = createLineChart(
+        document.getElementById("xLineChart").getContext("2d"),
+        "X",
+        "red"
+      );
+      const yLineChart = createLineChart(
+        document.getElementById("yLineChart").getContext("2d"),
+        "Y",
+        "blue"
+      );
+      const zLineChart = createLineChart(
+        document.getElementById("zLineChart").getContext("2d"),
+        "Z",
+        "orange"
+      );
+
+      // Mô phỏng dữ liệu sensor (có thể bỏ nếu không cần)
+      setInterval(() => {
+        const t = new Date().toLocaleTimeString(),
+          temp = (Math.random() * 10 + 20).toFixed(1),
+          humid = (Math.random() * 30 + 40).toFixed(1);
+        sensorChart.data.labels.push(t);
+        sensorChart.data.datasets[0].data.push(temp);
+        sensorChart.data.datasets[1].data.push(humid);
+        if (sensorChart.data.labels.length > 10) {
+          sensorChart.data.labels.shift();
+          sensorChart.data.datasets.forEach((ds) => ds.data.shift());
+        }
+        sensorChart.update();
+      }, 1000);
+    </script>
+  </body>
+</html>

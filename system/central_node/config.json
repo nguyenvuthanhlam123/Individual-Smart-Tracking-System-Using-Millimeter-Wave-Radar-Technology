@@ -1,0 +1,25 @@
+{
+  "anchorCoordinates": {
+    "comment": "Toa do cac diem neo S2(a, 0, 0) va S3(c, b, 0). S1 mac dinh la (0,0,0)",
+    "S2_a": 210,
+    "S3_c": 0,
+    "S3_b": 130
+  },
+  "calculationSettings": {
+    "historySize": 5,
+    "repeatIntervalMs": 2000,
+    "publishResults": true,
+    "distanceOffset": 35,
+    "averageCalculationIntervalMs": 3000
+  },
+  "logging": {
+    "level": "verbose"
+  },
+  "mqttConfig": {
+    "centralNodePort": 1886,
+    "deviceGatewayUrl": "mqtt://192.168.1.107:1885",
+    "sensorTopic": "/node/central",
+    "outputTopic": "/central/d_gateway",
+    "outputDeviceId": 1
+  }
+}

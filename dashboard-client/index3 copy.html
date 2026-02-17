@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IoT Dashboard - Modern Interface (Updated)</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        /* Enhanced Color Palette - Modern Dark/Light Theme */
+        --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --secondary-bg: #f8fafc;
+        --card-bg: #ffffff;
+        --card-bg-hover: #fefefe;
+        --card-border: rgba(226, 232, 240, 0.8);
+        --card-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+        --card-shadow-hover: 0 8px 40px rgba(0, 0, 0, 0.15);
+
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --text-accent: #3b82f6;
+        --text-muted: #94a3b8;
+
+        --accent-primary: #3b82f6;
+        --accent-secondary: #8b5cf6;
+        --accent-success: #10b981;
+        --accent-warning: #f59e0b;
+        --accent-danger: #ef4444;
+
+        --border-color: #e2e8f0;
+        --divider-color: #f1f5f9;
+
+        /* Gradients */
+        --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-card: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+        --gradient-accent: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+
+        /* Spacing & Sizing */
+        --spacing-xs: 0.25rem;
+        --spacing-sm: 0.5rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --spacing-xl: 2rem;
+        --spacing-2xl: 3rem;
+
+        --border-radius-sm: 6px;
+        --border-radius-md: 12px;
+        --border-radius-lg: 16px;
+        --border-radius-xl: 24px;
+
+        /* Animation */
+        --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        margin: 0;
+        padding: 0;
+        background: var(--primary-bg);
+        color: var(--text-primary);
+        line-height: 1.6;
+        font-size: 15px;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        min-height: 100vh;
+      }
+
+      /* Header Section */
+      .header-section {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid var(--border-color);
+        padding: var(--spacing-lg) var(--spacing-xl);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin: 0;
+        text-align: center;
+        background: var(--gradient-accent);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: -0.025em;
+      }
+
+      .subtitle {
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 1rem;
+        margin-top: var(--spacing-sm);
+        font-weight: 400;
+      }
+
+      /* Main Content Container */
+      .main-content {
+        padding: var(--spacing-xl);
+        background: var(--secondary-bg);
+        min-height: calc(100vh - 140px); /* Adjust if header height changes */
+      }
+
+      /* Dashboard Grid */
+      .dashboard-container {
+        display: grid;
+        gap: var(--spacing-xl);
+        grid-template-columns: 1fr; /* Default to single column for mobile */
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      @media (min-width: 768px) {
+        /* For tablets and larger */
+        .dashboard-container {
+          /* Two columns for tablets and medium screens */
+          grid-template-columns: repeat(
+            auto-fit,
+            minmax(min(100%, 400px), 1fr)
+          );
+        }
+      }
+
+      @media (min-width: 1200px) {
+        /* For large desktops */
+        .dashboard-container {
+          grid-template-columns: repeat(
+            2,
+            1fr
+          ); /* Explicitly two columns for large screens */
+        }
+      }
+
+      /* Enhanced Card Styling */
+      .card {
+        background: var(--gradient-card);
+        border: 1px solid var(--card-border);
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-xl);
+        box-shadow: var(--card-shadow);
+        transition: all var(--transition-normal);
+        position: relative;
+        overflow: hidden;
+        display: flex; /* Added to help with internal layout if needed */
+        flex-direction: column; /* Ensure card content flows vertically */
+      }
+
+      .card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--gradient-accent);
+        border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+      }
+
+      .card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--card-shadow-hover);
+        background: var(--card-bg-hover);
+      }
+
+      /* Card Titles */
+      .card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0 0 var(--spacing-lg) 0;
+        color: var(--text-primary);
+        text-align: left;
+        position: relative;
+        padding-left: var(--spacing-md);
+      }
+
+      .card-title::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 20px;
+        background: var(--gradient-accent);
+        border-radius: var(--border-radius-sm);
+      }
+
+      /* Chart Containers - Ensure they stack vertically */
+      .chart-js-container {
+        /* Applies to X, Y, Z charts */
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9; /* Maintain aspect ratio */
+        min-height: 240px; /* Minimum height */
+        margin-bottom: var(--spacing-lg); /* Space between stacked charts */
+        border-radius: var(--border-radius-md);
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .card > .chart-js-container:last-child {
+        /* Remove margin from last chart in a card */
+        margin-bottom: 0;
+      }
+
+      /* Bubble Chart Styling */
+      .bubble-chart-container {
+        /* Container for YX, ZY, XZ charts */
+        display: flex;
+        flex-direction: column; /* Ensures bubble charts stack vertically */
+        gap: var(--spacing-lg); /* Space between bubble charts */
+        width: 100%;
+      }
+
+      .bubble-chart-wrapper {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9; /* Consistent aspect ratio with other charts */
+        min-height: 240px; /* Consistent min-height */
+        border-radius: var(--border-radius-md);
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        /* margin-bottom is handled by the gap in .bubble-chart-container */
+      }
+
+      .bubble-chart-wrapper:last-child {
+        margin-bottom: 0;
+      }
+
+      .bubble-chart-wrapper p {
+        /* Titles above bubble charts */
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        text-align: center;
+        margin: 0 0 var(--spacing-sm) 0;
+        font-weight: 500;
+        padding: var(--spacing-sm);
+        background: rgba(59, 130, 246, 0.1);
+        border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+      }
+
+      /* 3D Radar Styling */
+      #radar3D {
+        width: 100%;
+        min-height: 350px;
+        aspect-ratio: 1 / 0.8;
+        border-radius: var(--border-radius-md);
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        overflow: hidden;
+      }
+
+      /* Map Styling */
+      #map {
+        min-height: 350px;
+        aspect-ratio: 1 / 0.8;
+        width: 100%;
+        border-radius: var(--border-radius-md);
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: #e0e0e0;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Info Section Styling */
+      .info-section {
+        margin-top: var(--spacing-lg);
+        padding-top: var(--spacing-lg);
+        border-top: 1px solid var(--divider-color);
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-lg);
+        backdrop-filter: blur(5px);
+      }
+
+      #radarValues {
+        text-align: center;
+        font-size: 1rem;
+        color: var(--text-primary);
+        font-weight: 600;
+        background: var(--gradient-accent);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: var(--spacing-sm);
+      }
+
+      p.radar-info {
+        margin: var(--spacing-sm) 0;
+        text-align: center;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        font-style: italic;
+      }
+
+      /* Status Messages */
+      .status-message {
+        /* This class should be added by JS to the <p> tags for WebSocket status */
+        padding: var(--spacing-md) var(--spacing-lg);
+        margin: var(--spacing-lg) auto; /* Centered with margin */
+        text-align: center;
+        font-weight: 500;
+        border-radius: var(--border-radius-md);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        max-width: 80%; /* Prevent full width */
+        position: fixed; /* Make it fixed to show on top */
+        top: 80px; /* Adjust based on header height */
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2000; /* High z-index */
+      }
+
+      .status-warning {
+        background: rgba(
+          245,
+          158,
+          11,
+          0.9
+        ); /* var(--accent-warning) with alpha */
+        color: white;
+      }
+
+      .status-error {
+        background: rgba(
+          239,
+          68,
+          68,
+          0.9
+        ); /* var(--accent-danger) with alpha */
+        color: white;
+      }
+
+      /* Map Error Overlay */
+      #map-error-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(239, 68, 68, 0.95);
+        color: white;
+        padding: var(--spacing-sm);
+        text-align: center;
+        z-index: 1000;
+        font-size: 0.85rem;
+        border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+        backdrop-filter: blur(10px);
+      }
+
+      /* Responsive Grid Adjustments - MODIFIED FOR VERTICAL STACKING */
+      @media (min-width: 992px) {
+        /* The following rules for grid display of charts are REMOVED or OVERRIDDEN
+               to ensure charts always stack vertically within their cards. */
+
+        /* .card:has(> .chart-js-container + .chart-js-container) {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: var(--spacing-lg);
+                align-items: start;
+            } */
+        /* This is now handled by .chart-js-container margin-bottom and flex column on card */
+
+        /* .card:has(> .chart-js-container + .chart-js-container) > .chart-js-container {
+                margin-bottom: 0;
+            } */
+
+        /* .bubble-chart-container {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: var(--spacing-lg);
+            } */
+        /* This is now handled by .bubble-chart-container flex-direction: column and gap */
+      }
+
+      /* Mobile Optimizations */
+      @media (max-width: 767px) {
+        .main-content {
+          padding: var(--spacing-md); /* Slightly reduce padding on mobile */
+        }
+
+        .dashboard-container {
+          gap: var(--spacing-lg);
+        }
+
+        .card {
+          padding: var(--spacing-lg);
+        }
+
+        .card-title {
+          font-size: 1.1rem;
+        }
+
+        .chart-js-container,
+        .bubble-chart-wrapper {
+          aspect-ratio: 16 / 10; /* More height on mobile */
+          min-height: 200px; /* Adjust min height for mobile */
+        }
+
+        #map,
+        #radar3D {
+          min-height: 280px;
+          aspect-ratio: 1 / 0.7;
+        }
+
+        h1 {
+          font-size: 1.75rem;
+        }
+        .status-message {
+          top: 70px; /* Adjust for potentially smaller header on mobile */
+          max-width: 90%;
+        }
+      }
+
+      /* Loading States */
+      .loading {
+        /* Add this class to card or chart container while loading */
+        position: relative;
+        overflow: hidden;
+      }
+
+      .loading::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.4),
+          transparent
+        );
+        animation: loading 1.5s infinite;
+      }
+
+      @keyframes loading {
+        0% {
+          left: -100%;
+        }
+        100% {
+          left: 100%;
+        }
+      }
+
+      /* Enhanced Leaflet Controls */
+      #map .leaflet-popup-content-wrapper {
+        border-radius: var(--border-radius-md);
+        box-shadow: var(--card-shadow);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+      }
+
+      #map .leaflet-popup-content {
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      #map .leaflet-control-zoom,
+      #map .leaflet-control-scale {
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        box-shadow: var(--card-shadow) !important;
+        backdrop-filter: blur(10px) !important;
+        border-radius: var(--border-radius-sm) !important;
+      }
+
+      /* Plotly Chart Theming */
+      .js-plotly-plot .plotly .bg {
+        fill: transparent !important; /* Make Plotly background transparent to inherit card's bg */
+      }
+      #radar3D .js-plotly-plot .plotly .bg {
+        fill: rgba(
+          255,
+          255,
+          255,
+          0.8
+        ) !important; /* Specific for radar3D if needed */
+      }
+
+      .js-plotly-plot .plotly .gridlayer .grid path {
+        stroke: var(--border-color) !important;
+      }
+
+      .js-plotly-plot .plotly .zeroline {
+        stroke: var(--text-secondary) !important;
+      }
+
+      .js-plotly-plot .plotly text {
+        fill: var(--text-secondary) !important;
+        font-family: "Inter", sans-serif !important;
+      }
+
+      /* Canvas Styling */
+      canvas {
+        border-radius: var(
+          --border-radius-sm
+        ); /* Ensure canvas itself has rounded corners if its container does */
+      }
+
+      /* Accessibility Improvements */
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+
+        .card {
+          transform: none !important;
+        }
+      }
+
+      /* Focus States */
+      .card:focus-within,
+      button:focus,
+      a:focus,
+      input:focus {
+        /* More comprehensive focus styling */
+        outline: 3px solid var(--accent-primary) !important;
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3) !important; /* Softer focus ring */
+      }
+
+      /* High Contrast Support */
+      @media (prefers-contrast: high) {
+        :root {
+          --card-border: #000000;
+          --text-secondary: #000000;
+          --text-muted: #000000;
+          --card-shadow: 0 0 0 1px #000000;
+          --primary-bg: #ffffff; /* Simpler background for high contrast */
+        }
+        .header-section {
+          background: #ffffff;
+          border-bottom: 2px solid #000000;
+        }
+        h1 {
+          /* Ensure text is visible in high contrast */
+          -webkit-text-fill-color: initial;
+          color: #000000;
+          background: none;
+        }
+        #radarValues {
+          -webkit-text-fill-color: initial;
+          color: #000000;
+          background: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header-section">
+      <h1>IoT Dashboard</h1>
+      <p class="subtitle">Real-time Monitoring & Visualization</p>
+    </header>
+
+    <main class="main-content">
+      <div class="dashboard-container">
+        <div class="card">
+          <h3 class="card-title">Vị trí</h3>
+          <div id="map" class="loading">Đang tải bản đồ...</div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Trực quan hóa Radar 3D (Plotly)</h3>
+          <div id="radar3D" class="loading"></div>
+          <div class="info-section">
+            <div id="radarValues">Tọa độ: N/A</div>
+            <p class="radar-info">
+              Phòng: 500x500x500 - Gốc (0,0,0) ở trên, Z hướng xuống
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Lịch sử Tọa độ</h3>
+          <div class="chart-js-container loading">
+            <canvas id="xChart"></canvas>
+          </div>
+          <div class="chart-js-container loading">
+            <canvas id="yChart"></canvas>
+          </div>
+          <div class="chart-js-container loading">
+            <canvas id="zChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Tương quan Tọa độ Tức thời</h3>
+          <div class="bubble-chart-container">
+            <div class="bubble-chart-wrapper loading">
+              <p><b>YX</b> (Trục tung ~ X(t))</p>
+              <canvas id="yxBubbleChart"></canvas>
+            </div>
+            <div class="bubble-chart-wrapper loading">
+              <p><b>ZY</b> (Trục tung ~ Y(t))</p>
+              <canvas id="zyBubbleChart"></canvas>
+            </div>
+            <div class="bubble-chart-wrapper loading">
+              <p><b>XZ</b> (Trục tung ~ Z(t))</p>
+              <canvas id="xzBubbleChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // --- Constants and Config ---
+        const MAX_HISTORY_POINTS = 30;
+        const ROOM_SIZE = 500; // Used for axis limits, not directly for r-to-pixel scaling here.
+
+        // Sensor's expected operational range for 'r'
+        const MIN_RADIUS_FROM_SENSOR = 0.5;
+        const MAX_RADIUS_FROM_SENSOR = 50;
+
+        // Target visual pixel radius range for 2D Chart.js charts
+        const MIN_VISUAL_POINT_RADIUS = 2;
+        const MAX_VISUAL_POINT_RADIUS = 100; // Adjusted: Max pixel radius for 2D points/bubbles after scaling
+
+        const chartColors = {
+          x: "rgb(255, 0, 0)",
+          y: "rgb(0, 255, 0)",
+          z: "rgb(0, 0, 255)",
+        };
+        const bubbleColorX = "rgba(255, 0, 0, 0.6)";
+        const bubbleColorY = "rgba(0, 255, 0, 0.6)";
+        const bubbleColorZ = "rgba(0, 0, 255, 0.6)";
+        const bubbleBorderColor = "rgb(108, 117, 125)";
+
+        // --- Global Variables ---
+        let xChart, yChart, zChart;
+        let yxBubbleChart, zyBubbleChart, xzBubbleChart;
+        let map;
+        let radarHistory = [];
+        let radarPlotlyInitialized = false;
+
+        // --- Helper Functions ---
+        /**
+         * Calculates the visual pixel radius for points/bubbles in Chart.js 2D charts.
+         * The size is proportional to the sensor's 'r' value relative to its expected
+         * operational range [MIN_RADIUS_FROM_SENSOR, MAX_RADIUS_FROM_SENSOR],
+         * and then mapped to a display pixel range
+         * [MIN_VISUAL_POINT_RADIUS, MAX_VISUAL_POINT_RADIUS].
+         */
+        function getDynamicPointRadius(r_sensor) {
+          // 1. Clamp r_sensor to its defined operational range
+          const clamped_r = Math.max(
+            MIN_RADIUS_FROM_SENSOR,
+            Math.min(r_sensor, MAX_RADIUS_FROM_SENSOR)
+          );
+
+          // 2. Normalize the clamped r_sensor value (to a 0-1 range)
+          //    based on its operational min/max.
+          let normalizedR = 0;
+          const sensorRadiusRange =
+            MAX_RADIUS_FROM_SENSOR - MIN_RADIUS_FROM_SENSOR;
+
+          if (sensorRadiusRange > 0) {
+            normalizedR =
+              (clamped_r - MIN_RADIUS_FROM_SENSOR) / sensorRadiusRange;
+          } else if (clamped_r >= MAX_RADIUS_FROM_SENSOR) {
+            // Handle edge case where min and max sensor radius are the same
+            normalizedR = 1;
+          }
+          // If clamped_r < MIN_RADIUS_FROM_SENSOR (already handled by clamp), normalizedR remains 0.
+
+          // 3. Scale the normalized value to the desired output pixel range
+          const visualPixelRange =
+            MAX_VISUAL_POINT_RADIUS - MIN_VISUAL_POINT_RADIUS;
+          const pixelRadius =
+            MIN_VISUAL_POINT_RADIUS + normalizedR * visualPixelRange;
+
+          return pixelRadius;
+        }
+
+        // Function to remove loading class
+        function removeLoadingClass(elementId) {
+          const el = document.getElementById(elementId);
+          if (
+            el &&
+            el.parentElement &&
+            el.parentElement.classList.contains("loading")
+          ) {
+            el.parentElement.classList.remove("loading");
+          } else if (el && el.classList.contains("loading")) {
+            el.classList.remove("loading");
+          }
+        }
+
+        // --- Initialization Functions ---
+        function initTimeSeriesCharts() {
+          const commonOptions = (label, minVal, maxVal, showTime = true) => ({
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: { mode: "index", intersect: false },
+            scales: {
+              x: {
+                ticks: {
+                  display: showTime,
+                  maxRotation: 0,
+                  autoSkip: true,
+                  maxTicksLimit: 6,
+                  font: { size: 9 },
+                  color: "var(--text-secondary)",
+                },
+                grid: { display: true, color: "var(--divider-color)" },
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: label,
+                  font: { size: 10 },
+                  color: "var(--text-primary)",
+                },
+                min: minVal,
+                max: maxVal,
+                ticks: {
+                  stepSize: 100,
+                  font: { size: 9 },
+                  color: "var(--text-secondary)",
+                },
+                grid: { display: true, color: "var(--divider-color)" },
+              },
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                bodyFont: { size: 10 },
+                titleFont: { size: 10 },
+                displayColors: false,
+                backgroundColor: "rgba(0,0,0,0.7)",
+                titleColor: "white",
+                bodyColor: "white",
+              },
+            },
+          });
+
+          const pointRadiusFunc = (context) => {
+            const idx = context.dataIndex;
+            return (
+              (context.dataset.pointRadii && context.dataset.pointRadii[idx]) ||
+              MIN_VISUAL_POINT_RADIUS
+            );
+          };
+          const pointOptions = {
+            elements: {
+              point: {
+                radius: pointRadiusFunc,
+                hoverRadius: (ctx) => pointRadiusFunc(ctx) + 2,
+                borderWidth: 1,
+                borderColor: "rgba(0,0,0,0.2)",
+              },
+            },
+          };
+
+          const xCtx = document.getElementById("xChart")?.getContext("2d");
+          const yCtx = document.getElementById("yChart")?.getContext("2d");
+          const zCtx = document.getElementById("zChart")?.getContext("2d");
+          let success = true;
+
+          if (xCtx) {
+            xChart = new Chart(xCtx, {
+              type: "line",
+              data: {
+                labels: [],
+                datasets: [
+                  {
+                    label: "X",
+                    data: [],
+                    borderColor: chartColors.x,
+                    borderWidth: 1.5,
+                    pointRadii: [],
+                    tension: 0.1,
+                  },
+                ],
+              },
+              options: { ...commonOptions("X", 0, ROOM_SIZE), ...pointOptions },
+            });
+            removeLoadingClass("xChart");
+          } else {
+            console.error("xChart canvas not found");
+            success = false;
+          }
+
+          if (yCtx) {
+            yChart = new Chart(yCtx, {
+              type: "line",
+              data: {
+                labels: [],
+                datasets: [
+                  {
+                    label: "Y",
+                    data: [],
+                    borderColor: chartColors.y,
+                    borderWidth: 1.5,
+                    pointRadii: [],
+                    tension: 0.1,
+                  },
+                ],
+              },
+              options: { ...commonOptions("Y", 0, ROOM_SIZE), ...pointOptions },
+            });
+            removeLoadingClass("yChart");
+          } else {
+            console.error("yChart canvas not found");
+            success = false;
+          }
+
+          if (zCtx) {
+            zChart = new Chart(zCtx, {
+              type: "line",
+              data: {
+                labels: [],
+                datasets: [
+                  {
+                    label: "Z",
+                    data: [],
+                    borderColor: chartColors.z,
+                    borderWidth: 1.5,
+                    pointRadii: [],
+                    tension: 0.1,
+                  },
+                ],
+              },
+              options: { ...commonOptions("Z", 0, ROOM_SIZE), ...pointOptions },
+            });
+            removeLoadingClass("zChart");
+          } else {
+            console.error("zChart canvas not found");
+            success = false;
+          }
+
+          return success;
+        }
+
+        function initBubbleCharts() {
+          const commonBubbleOptions = (
+            xLabel,
+            yLabel,
+            xMin,
+            xMax,
+            yMin,
+            yMax
+          ) => ({
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            scales: {
+              x: {
+                min: xMin,
+                max: xMax,
+                title: {
+                  display: true,
+                  text: xLabel,
+                  font: { size: 10 },
+                  color: "var(--text-primary)",
+                },
+                ticks: {
+                  stepSize: 100,
+                  font: { size: 9 },
+                  color: "var(--text-secondary)",
+                },
+                grid: { display: true, color: "var(--divider-color)" },
+              },
+              y: {
+                min: yMin,
+                max: yMax,
+                title: {
+                  display: true,
+                  text: yLabel,
+                  font: { size: 10 },
+                  color: "var(--text-primary)",
+                },
+                ticks: {
+                  stepSize: 100,
+                  font: { size: 9 },
+                  color: "var(--text-secondary)",
+                },
+                grid: { display: true, color: "var(--divider-color)" },
+              },
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                enabled: true,
+                callbacks: {},
+                backgroundColor: "rgba(0,0,0,0.7)",
+                titleColor: "white",
+                bodyColor: "white",
+                displayColors: false,
+              },
+            },
+          });
+
+          const tooltipCallback = (context) => {
+            const dataPoint = context.raw;
+            const lastHistory = radarHistory[radarHistory.length - 1];
+            let original_r_from_sensor = lastHistory ? lastHistory.r_sensor : 0;
+            // The dataPoint.r is already the scaled pixel radius.
+            // For tooltip, we show the original sensor r.
+            if (context.chart.canvas.id === "yxBubbleChart")
+              return `Y: ${dataPoint.x.toFixed(1)}, X: ${dataPoint.y.toFixed(
+                1
+              )}, Sensor r: ${original_r_from_sensor.toFixed(1)}`;
+            if (context.chart.canvas.id === "zyBubbleChart")
+              return `Z: ${dataPoint.x.toFixed(1)}, Y: ${dataPoint.y.toFixed(
+                1
+              )}, Sensor r: ${original_r_from_sensor.toFixed(1)}`;
+            if (context.chart.canvas.id === "xzBubbleChart")
+              return `X: ${dataPoint.x.toFixed(1)}, Z: ${dataPoint.y.toFixed(
+                1
+              )}, Sensor r: ${original_r_from_sensor.toFixed(1)}`;
+            return "";
+          };
+
+          const yxCtx = document
+            .getElementById("yxBubbleChart")
+            ?.getContext("2d");
+          const zyCtx = document
+            .getElementById("zyBubbleChart")
+            ?.getContext("2d");
+          const xzCtx = document
+            .getElementById("xzBubbleChart")
+            ?.getContext("2d");
+          let success = true;
+          const initialVisualRadius = getDynamicPointRadius(
+            MIN_RADIUS_FROM_SENSOR
+          );
+          const initialBubblePoint = {
+            x: ROOM_SIZE / 2,
+            y: ROOM_SIZE / 2,
+            r: initialVisualRadius,
+          };
+
+          if (yxCtx) {
+            const yxOptions = commonBubbleOptions(
+              "Y",
+              "X",
+              0,
+              ROOM_SIZE,
+              0,
+              ROOM_SIZE
+            );
+            yxOptions.plugins.tooltip.callbacks.label = tooltipCallback;
+            yxBubbleChart = new Chart(yxCtx, {
+              type: "bubble",
+              data: {
+                datasets: [
+                  {
+                    label: "YX",
+                    data: [initialBubblePoint],
+                    backgroundColor: bubbleColorX,
+                    borderColor: bubbleBorderColor,
+                    borderWidth: 1,
+                  },
+                ],
+              },
+              options: yxOptions,
+            });
+            removeLoadingClass("yxBubbleChart");
+          } else {
+            console.error("yxBubbleChart canvas not found");
+            success = false;
+          }
+
+          if (zyCtx) {
+            const zyOptions = commonBubbleOptions(
+              "Z",
+              "Y",
+              0,
+              ROOM_SIZE,
+              0,
+              ROOM_SIZE
+            );
+            zyOptions.plugins.tooltip.callbacks.label = tooltipCallback;
+            zyBubbleChart = new Chart(zyCtx, {
+              type: "bubble",
+              data: {
+                datasets: [
+                  {
+                    label: "ZY",
+                    data: [initialBubblePoint],
+                    backgroundColor: bubbleColorY,
+                    borderColor: bubbleBorderColor,
+                    borderWidth: 1,
+                  },
+                ],
+              },
+              options: zyOptions,
+            });
+            removeLoadingClass("zyBubbleChart");
+          } else {
+            console.error("zyBubbleChart canvas not found");
+            success = false;
+          }
+
+          if (xzCtx) {
+            const xzOptions = commonBubbleOptions(
+              "X",
+              "Z",
+              0,
+              ROOM_SIZE,
+              0,
+              ROOM_SIZE
+            );
+            xzOptions.plugins.tooltip.callbacks.label = tooltipCallback;
+            xzBubbleChart = new Chart(xzCtx, {
+              type: "bubble",
+              data: {
+                datasets: [
+                  {
+                    label: "XZ",
+                    data: [initialBubblePoint],
+                    backgroundColor: bubbleColorZ,
+                    borderColor: bubbleBorderColor,
+                    borderWidth: 1,
+                  },
+                ],
+              },
+              options: xzOptions,
+            });
+            removeLoadingClass("xzBubbleChart");
+          } else {
+            console.error("xzBubbleChart canvas not found");
+            success = false;
+          }
+
+          return success;
+        }
+
+        function initPlotly3D() {
+          const radarDiv = document.getElementById("radar3D");
+          if (!radarDiv || typeof Plotly === "undefined") {
+            console.error("Plotly container or library not found.");
+            return false;
+          }
+          try {
+            const origin = { x: 0, y: 0, z: 0 };
+            let initX = ROOM_SIZE / 2,
+              initY = ROOM_SIZE / 2,
+              initZ = ROOM_SIZE / 2;
+            let initMarkerSize = MIN_RADIUS_FROM_SENSOR; // Plotly uses this value with sizemode: 'diameter'
+
+            const radarTrace = {
+              x: [initX],
+              y: [initY],
+              z: [initZ],
+              mode: "markers",
+              marker: {
+                size: initMarkerSize,
+                color: "var(--accent-danger)",
+                sizemode: "diameter", // Interprets 'size' as diameter
+                sizeref: 1, // Adjust if sizes appear too small/large relative to data units.
+                // sizeref allows scaling. Default is 1.
+                // A smaller sizeref (e.g., 0.1) makes markers larger for the same 'size' value.
+                // A larger sizeref (e.g., 10) makes markers smaller.
+                // This might need tuning if you want Plotly marker sizes to visually
+                // correspond more directly to axis units.
+                sizemin: MIN_VISUAL_POINT_RADIUS, // Smallest visual size in pixels for Plotly markers
+              },
+              type: "scatter3d",
+              name: "Radar",
+            };
+            const originTrace = {
+              x: [origin.x],
+              y: [origin.y],
+              z: [origin.z],
+              mode: "markers+text",
+              marker: { size: 8, color: "var(--text-primary)" },
+              text: ["O"],
+              textposition: "top center",
+              type: "scatter3d",
+              name: "Origin",
+            };
+
+            const layout = {
+              margin: { l: 5, r: 5, b: 5, t: 5, pad: 0 },
+              scene: {
+                aspectmode: "cube",
+                xaxis: {
+                  title: "X",
+                  range: [0, ROOM_SIZE],
+                  backgroundcolor: "rgba(230, 230,230,0.3)",
+                  gridcolor: "var(--border-color)",
+                  showbackground: true,
+                  zerolinecolor: "var(--text-primary)",
+                  titlefont: { color: "var(--text-primary)" },
+                  tickfont: { color: "var(--text-secondary)" },
+                },
+                yaxis: {
+                  title: "Y",
+                  range: [0, ROOM_SIZE],
+                  backgroundcolor: "rgba(230, 230,230,0.3)",
+                  gridcolor: "var(--border-color)",
+                  showbackground: true,
+                  zerolinecolor: "var(--text-primary)",
+                  titlefont: { color: "var(--text-primary)" },
+                  tickfont: { color: "var(--text-secondary)" },
+                },
+                zaxis: {
+                  title: "Z (Hướng xuống)",
+                  range: [ROOM_SIZE, 0],
+                  backgroundcolor: "rgba(230, 230,230,0.3)",
+                  gridcolor: "var(--border-color)",
+                  showbackground: true,
+                  zerolinecolor: "var(--text-primary)",
+                  titlefont: { color: "var(--text-primary)" },
+                  tickfont: { color: "var(--text-secondary)" },
+                },
+                camera: {
+                  up: { x: 0, y: 0, z: 1 },
+                  eye: { x: 1.5, y: 1.5, z: 1.5 },
+                },
+              },
+              paper_bgcolor: "transparent",
+              plot_bgcolor: "transparent",
+            };
+            const config = { responsive: true, displayModeBar: false };
+
+            Plotly.newPlot(
+              "radar3D",
+              [radarTrace, originTrace],
+              layout,
+              config
+            );
+            radarPlotlyInitialized = true;
+            updateRadarDisplay(initX, initY, initZ, MIN_RADIUS_FROM_SENSOR);
+            removeLoadingClass("radar3D");
+            return true;
+          } catch (error) {
+            console.error("Error initializing Plotly 3D chart:", error);
+            return false;
+          }
+        }
+
+        function updateRadarDisplay(x, y, z, r_sensor) {
+          const el = document.getElementById("radarValues");
+          if (el) {
+            el.innerText = `X: ${x.toFixed(1)}, Y: ${y.toFixed(
+              1
+            )}, Z: ${z.toFixed(1)}, R: ${r_sensor.toFixed(1)}`;
+          }
+        }
+
+        function initMap() {
+          const mapDiv = document.getElementById("map");
+          if (!mapDiv) {
+            console.error("Map container not found");
+            return false;
+          }
+          try {
+            const defaultCoords = [10.7769, 106.7009];
+            const defaultZoom = 15;
+            if (map) {
+              map.remove();
+              map = null;
+            }
+            map = L.map("map", {
+              zoomControl: false,
+              attributionControl: false,
+            }).setView(defaultCoords, defaultZoom);
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+              maxZoom: 18,
+            }).addTo(map);
+            L.control
+              .attribution({
+                prefix:
+                  '<a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> | &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+                position: "bottomleft",
+              })
+              .addTo(map);
+            L.control.scale({ imperial: false }).addTo(map);
+            L.control.zoom({ position: "bottomright" }).addTo(map);
+            L.marker(defaultCoords)
+              .addTo(map)
+              .bindPopup("Trung tâm TP.HCM (Mặc định)")
+              .openPopup();
+            removeLoadingClass("map");
+
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  const realCoords = [
+                    position.coords.latitude,
+                    position.coords.longitude,
+                  ];
+                  map.setView(realCoords, defaultZoom);
+                  map.eachLayer((layer) => {
+                    if (layer instanceof L.Marker) map.removeLayer(layer);
+                  });
+                  L.marker(realCoords)
+                    .addTo(map)
+                    .bindPopup("Vị trí của bạn")
+                    .openPopup();
+                },
+                (error) => {
+                  console.warn("Không thể lấy vị trí thực tế:", error.message);
+                  showMapError(error);
+                },
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+              );
+            } else {
+              mapDiv.innerHTML =
+                "<p style='text-align:center; padding: 10px;'>Geolocation không được hỗ trợ.</p>";
+            }
+          } catch (error) {
+            console.error("Error initializing map:", error);
+            mapDiv.innerHTML =
+              "<p style='text-align:center; padding: 10px; color: red;'>Lỗi khởi tạo bản đồ.</p>";
+            return false;
+          }
+          return true;
+        }
+
+        function displayStatusMessage(message, type = "warning") {
+          const existingMessages = document.querySelectorAll(".status-message");
+          existingMessages.forEach((msg) => msg.remove());
+          const statusDiv = document.createElement("p");
+          statusDiv.className = `status-message status-${type}`;
+          statusDiv.textContent = message;
+          const mainContent = document.querySelector(".main-content");
+          if (mainContent) {
+            mainContent.insertBefore(statusDiv, mainContent.firstChild);
+          } else {
+            document.body.insertAdjacentElement("afterbegin", statusDiv);
+          }
+          setTimeout(() => {
+            statusDiv.remove();
+          }, 7000);
+        }
+
+        function showMapError(error) {
+          const mapDiv = document.getElementById("map");
+          if (!mapDiv) return;
+          let message = "Lỗi không xác định khi lấy vị trí.";
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              message = "Đã từ chối truy cập vị trí.";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              message = "Thông tin vị trí không khả dụng.";
+              break;
+            case error.TIMEOUT:
+              message = "Yêu cầu vị trí hết hạn.";
+              break;
+          }
+          const errorDivId = "map-error-overlay";
+          let errorDiv = document.getElementById(errorDivId);
+          if (!errorDiv) {
+            errorDiv = document.createElement("div");
+            errorDiv.id = errorDivId;
+            mapDiv.style.position = "relative";
+            mapDiv.appendChild(errorDiv);
+          }
+          errorDiv.textContent = message;
+          console.error("Geolocation Error:", error.message);
+        }
+
+        const ws = new WebSocket(`ws://${window.location.host}`);
+
+        ws.onopen = () => {
+          console.log("WebSocket connection established");
+        };
+        ws.onerror = (error) => {
+          console.error("WebSocket Error:", error);
+          displayStatusMessage(
+            "Lỗi: Mất kết nối WebSocket đến server.",
+            "error"
+          );
+        };
+        ws.onclose = () => {
+          console.log("WebSocket connection closed");
+          displayStatusMessage(
+            "Lỗi: Kết nối WebSocket đã đóng. Hãy làm mới trang.",
+            "error"
+          );
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            const newX = message.x;
+            const newY = message.y;
+            const newZ = message.z;
+            const newR_sensor = message.r; // Raw radius value from sensor
+
+            if (
+              typeof newX === "number" &&
+              typeof newY === "number" &&
+              typeof newZ === "number" &&
+              typeof newR_sensor === "number"
+            ) {
+              // For 2D charts (Time Series, Bubble), use the scaled pixel radius
+              const visualRadiusFor2D = getDynamicPointRadius(newR_sensor);
+              const timeLabel = new Date().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              });
+
+              // 1. Update Plotly 3D Radar
+              // For Plotly, marker.size is updated with the raw newR_sensor.
+              if (radarPlotlyInitialized && typeof Plotly !== "undefined") {
+                Plotly.restyle(
+                  "radar3D",
+                  {
+                    x: [[newX]],
+                    y: [[newY]],
+                    z: [[newZ]],
+                    "marker.size": [[newR_sensor]], // Use raw sensor R for Plotly
+                  },
+                  [0]
+                );
+              }
+              updateRadarDisplay(newX, newY, newZ, newR_sensor);
+
+              // 2. Update Bubble Charts
+              if (yxBubbleChart) {
+                yxBubbleChart.data.datasets[0].data[0] = {
+                  x: newY,
+                  y: newX,
+                  r: visualRadiusFor2D,
+                };
+                yxBubbleChart.update("none");
+              }
+              if (zyBubbleChart) {
+                zyBubbleChart.data.datasets[0].data[0] = {
+                  x: newZ,
+                  y: newY,
+                  r: visualRadiusFor2D,
+                };
+                zyBubbleChart.update("none");
+              }
+              if (xzBubbleChart) {
+                xzBubbleChart.data.datasets[0].data[0] = {
+                  x: newX,
+                  y: newZ,
+                  r: visualRadiusFor2D,
+                };
+                xzBubbleChart.update("none");
+              }
+
+              // 3. Update Time Series Charts
+              const charts = [xChart, yChart, zChart];
+              const dataValues = [newX, newY, newZ];
+              charts.forEach((chart, index) => {
+                if (chart) {
+                  try {
+                    chart.data.labels.push(timeLabel);
+                    chart.data.datasets[0].data.push(dataValues[index]);
+                    if (!chart.data.datasets[0].pointRadii)
+                      chart.data.datasets[0].pointRadii = [];
+                    chart.data.datasets[0].pointRadii.push(visualRadiusFor2D);
+
+                    if (chart.data.labels.length > MAX_HISTORY_POINTS) {
+                      chart.data.labels.shift();
+                      chart.data.datasets[0].data.shift();
+                      chart.data.datasets[0].pointRadii?.shift();
+                    }
+                    chart.update("none");
+                  } catch (chartError) {
+                    console.error(
+                      `Lỗi cập nhật biểu đồ ${chart.canvas.id}:`,
+                      chartError
+                    );
+                  }
+                }
+              });
+
+              // 4. Update Radar History
+              const newDataPoint = {
+                time: timeLabel,
+                x: newX,
+                y: newY,
+                z: newZ,
+                r_sensor: newR_sensor,
+                visual_r_2d: visualRadiusFor2D,
+              };
+              radarHistory.push(newDataPoint);
+              if (radarHistory.length > MAX_HISTORY_POINTS)
+                radarHistory.shift();
+            } else {
+              console.warn(
+                "Dữ liệu nhận được từ WebSocket không hợp lệ:",
+                message
+              );
+            }
+          } catch (error) {
+            console.error("Lỗi xử lý tin nhắn WebSocket:", error);
+            console.error("Dữ liệu gốc:", event.data);
+          }
+        };
+
+        try {
+          let tsChartsOk = initTimeSeriesCharts();
+          let bubbleChartsOk = initBubbleCharts();
+          let plotlyOk = initPlotly3D();
+          let mapOk = initMap();
+
+          if (tsChartsOk && bubbleChartsOk && plotlyOk && mapOk) {
+            console.log("Các thành phần dashboard đã khởi tạo thành công.");
+          } else {
+            console.error(
+              "Khởi tạo thành phần dashboard thất bại. Dashboard có thể không hoạt động đúng."
+            );
+            displayStatusMessage(
+              "Lỗi: Không thể khởi tạo một số thành phần chính của Dashboard.",
+              "error"
+            );
+          }
+        } catch (error) {
+          console.error("CRITICAL Error during initial setup:", error);
+          document.body.innerHTML = `<p style='color:red; text-align:center; padding: 20px; font-size: 1.2em;'>Đã xảy ra lỗi nghiêm trọng khi tải Dashboard. Vui lòng kiểm tra Console (F12) và làm mới trang.</p>`;
+        }
+      });
+    </script>
+  </body>
+</html>

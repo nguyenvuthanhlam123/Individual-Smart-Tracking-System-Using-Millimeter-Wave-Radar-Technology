@@ -1,0 +1,147 @@
+/* --- Global Styles --- */
+:root {
+  --card-bg: #fff;
+  --card-border: #ddd;
+  --card-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  --text-color: #333;
+  --light-text-color: #666;
+  --bg-color: #f4f7f9;
+  --padding: 15px;
+  --gap: 20px;
+}
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: var(--gap);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--text-color);
+}
+h1 {
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+}
+h2 {
+  font-size: 1.5rem;
+}
+h3 {
+  font-size: 1.1rem;
+  color: var(--text-color);
+}
+
+/* --- Layout: CSS Grid --- */
+.dashboard-container {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 768px) {
+  .dashboard-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* --- Card Styling --- */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: var(--padding);
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.card-title {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  font-weight: 600;
+}
+
+/* --- Chart Containers --- */
+.chart-js-container {
+  position: relative;
+  aspect-ratio: 1/1;
+  width: 33%;
+  margin-bottom: 12px;
+}
+.bubble-chart-wrapper {
+  position: relative;
+  min-height: 300px;
+  height: 300px;
+  width: 33%;
+  margin-bottom: 12px;
+}
+.chart-js-container:last-child,
+.bubble-chart-wrapper:last-child {
+  margin-bottom: 0;
+}
+.bubble-chart-wrapper p {
+  font-size: 0.85em;
+  color: var(--light-text-color);
+  text-align: center;
+  margin-bottom: 2px;
+  font-weight: bold;
+}
+
+/* --- 3D Radar Area (Plotly) --- */
+#radar3D {
+  width: 100%;
+  min-height: 200px;
+  aspect-ratio: 1 / 0.8;
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  background-color: #eaf0f3;
+}
+#radarValues {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 1em;
+  color: #333;
+  font-weight: bold;
+}
+
+/* --- Map --- */
+#map {
+  min-height: 200px;
+  aspect-ratio: 1 / 0.8;
+  width: 100%;
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  margin-top: 0;
+  background-color: #eee;
+}
+#map .leaflet-popup-content-wrapper {
+  border-radius: 3px;
+}
+
+/* --- Info Displays --- */
+#coordsDisplay {
+  font-weight: 600;
+  color: #0056b3;
+  font-size: 0.9em;
+} /* Giữ lại nếu cần */
+p.radar-info {
+  margin: 5px 0;
+  text-align: center;
+  font-size: 0.8em;
+  color: var(--light-text-color);
+}
+.info-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
